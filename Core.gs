@@ -319,8 +319,11 @@ function logTransaction(action, itemName, fromLoc, fromBox, toLoc, toBox, quanti
   // Insert new row at position 2 (right after header)
   historySheet.insertRowAfter(1);
 
+  // Get the range for the new row
+  const newRowRange = historySheet.getRange(2, 1, 1, 8);
+
   // Set values in the newly inserted row 2
-  historySheet.getRange(2, 1, 1, 8).setValues([[
+  newRowRange.setValues([[
     new Date(),
     user,
     action,
@@ -330,6 +333,11 @@ function logTransaction(action, itemName, fromLoc, fromBox, toLoc, toBox, quanti
     quantity || '',
     notes || ''
   ]]);
+
+  // Reset formatting to plain (remove header formatting)
+  newRowRange.setBackground('white');
+  newRowRange.setFontColor('black');
+  newRowRange.setFontWeight('normal');
 
   Logger.log(`Logged transaction: ${action} ${itemName}`);
 }

@@ -8,6 +8,7 @@
 /**
  * Creates a timestamped backup copy of the Main Inventory sheet
  * Can be called manually or automatically via trigger
+ * Excludes the Remove? checkbox column and protects the backup
  */
 function createBackup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -38,9 +39,56 @@ function createBackup() {
   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
   const backupName = `Backup - Main Inventory - ${timestamp}`;
 
-  // Duplicate the Main Inventory sheet
-  const backupSheet = inventorySheet.copyTo(ss);
-  backupSheet.setName(backupName);
+  // Create new backup sheet
+  const backupSheet = ss.insertSheet(backupName);
+
+  // Copy ONLY columns B-G (Item Name, Location, Box, Quantity, Last Updated, Full Location)
+  // Excludes column A (Remove? checkboxes)
+
+  // Copy header row (columns B-G only)
+  const headerData = inventorySheet.getRange('B1:G1').getValues();
+  backupSheet.getRange('A1:F1').setValues(headerData);
+
+  // Copy data rows (columns B-G only)
+  if (lastRow > 1) {
+    const dataRange = inventorySheet.getRange(2, 2, lastRow - 1, 6); // Start at column 2 (B), 6 columns wide
+    const data = dataRange.getValues();
+    backupSheet.getRange(2, 1, data.length, 6).setValues(data);
+  }
+
+  // Format header row
+  backupSheet.getRange('A1:F1')
+    .setFontWeight('bold')
+    .setBackground('#4285f4')
+    .setFontColor('#ffffff')
+    .setHorizontalAlignment('center');
+
+  // Set column widths
+  backupSheet.setColumnWidth(1, 250);  // Item Name
+  backupSheet.setColumnWidth(2, 100);  // Location
+  backupSheet.setColumnWidth(3, 80);   // Box
+  backupSheet.setColumnWidth(4, 100);  // Quantity
+  backupSheet.setColumnWidth(5, 150);  // Last Updated
+  backupSheet.setColumnWidth(6, 120);  // Full Location
+
+  // Freeze header row
+  backupSheet.setFrozenRows(1);
+
+  // Protect the backup sheet to prevent accidental changes
+  const protection = backupSheet.protect().setDescription('Backup sheet - protected to prevent accidental changes');
+
+  // Show warning when user tries to edit
+  protection.setWarningOnly(true);
+
+  // Add note to indicate this is a protected backup
+  backupSheet.getRange('A1').setNote(
+    'This is a protected backup created on ' + timestamp + '.\n\n' +
+    '⚠️ Backup sheets are protected to prevent accidental changes.\n' +
+    'You will see a warning if you try to edit.\n\n' +
+    'To restore from this backup:\n' +
+    '1. Copy data from this sheet\n' +
+    '2. Paste into Main Inventory sheet'
+  );
 
   // Move backup sheet to the end
   ss.moveActiveSheet(ss.getNumSheets());
@@ -50,14 +98,14 @@ function createBackup() {
 
   // Log success
   Logger.log(`Backup created successfully: ${backupName}`);
-  Logger.log(`Backed up ${lastRow - 1} items`);
+  Logger.log(`Backed up ${lastRow - 1} items (columns B-G only, checkboxes excluded)`);
 
   // Show success message if called manually
   if (isCalledManually()) {
     ss.toast(
       `✅ Backup created: "${backupName}"\n\n` +
       `Backed up ${lastRow - 1} item(s).\n\n` +
-      'The backup sheet is at the end of your tabs.',
+      'The backup is protected and located at the end of your tabs.',
       'Backup Complete',
       8
     );
