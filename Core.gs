@@ -307,6 +307,7 @@ function findItemRow(itemName) {
 
 /**
  * Logs a transaction to the Transaction History sheet
+ * Inserts at row 2 (top) so newest transactions appear first
  */
 function logTransaction(action, itemName, fromLoc, fromBox, toLoc, toBox, quantity, notes, user) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -315,7 +316,11 @@ function logTransaction(action, itemName, fromLoc, fromBox, toLoc, toBox, quanti
   const fromLocation = fromLoc && fromBox ? `${fromLoc}-${fromBox}` : fromLoc || '';
   const toLocation = toLoc && toBox ? `${toLoc}-${toBox}` : toLoc || '';
 
-  historySheet.appendRow([
+  // Insert new row at position 2 (right after header)
+  historySheet.insertRowAfter(1);
+
+  // Set values in the newly inserted row 2
+  historySheet.getRange(2, 1, 1, 8).setValues([[
     new Date(),
     user,
     action,
@@ -324,7 +329,7 @@ function logTransaction(action, itemName, fromLoc, fromBox, toLoc, toBox, quanti
     toLocation,
     quantity || '',
     notes || ''
-  ]);
+  ]]);
 
   Logger.log(`Logged transaction: ${action} ${itemName}`);
 }
