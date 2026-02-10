@@ -5,9 +5,9 @@
 
 /**
  * 🔧 FIX: Removes ALL validation errors in Main Inventory
- * - Column A (Item Name): Removes incorrect validation
- * - Column C (Box): Removes incorrect validation
- * - Column G (Remove?): Inserts proper checkboxes
+ * - Column A (Remove?): Ensures proper checkboxes
+ * - Column B (Item Name): Removes incorrect validation
+ * - Column D (Box): Removes incorrect validation
  *
  * Run this from Script Editor
  */
@@ -31,9 +31,9 @@ function fixAllValidationErrors() {
   const response = ui.alert(
     'Fix All Validation Errors',
     `This will fix validation errors in Main Inventory:\n\n` +
-    `• Column A (Item Name): Remove invalid validation\n` +
-    `• Column C (Box): Remove invalid validation\n` +
-    `• Column G (Remove?): Insert proper checkboxes\n\n` +
+    `• Column A (Remove?): Ensure proper checkboxes\n` +
+    `• Column B (Item Name): Remove invalid validation\n` +
+    `• Column D (Box): Remove invalid validation\n\n` +
     `Rows affected: ${lastRow - 1}\n\n` +
     'Continue?',
     ui.ButtonSet.OK_CANCEL
@@ -44,17 +44,9 @@ function fixAllValidationErrors() {
     return;
   }
 
-  // FIX 1: Remove validation from Column A (Item Name) - should NOT have validation
-  Logger.log('Removing validation from Column A (Item Name)...');
-  inventorySheet.getRange('A2:A1000').clearDataValidations();
-
-  // FIX 2: Remove validation from Column C (Box) - should NOT have validation
-  Logger.log('Removing validation from Column C (Box)...');
-  inventorySheet.getRange('C2:C1000').clearDataValidations();
-
-  // FIX 3: Fix Column G (Remove?) checkboxes
-  Logger.log('Fixing Column G (Remove?) checkboxes...');
-  const checkboxRange = inventorySheet.getRange(2, 7, lastRow - 1, 1);
+  // FIX 1: Fix Column A (Remove?) checkboxes
+  Logger.log('Fixing Column A (Remove?) checkboxes...');
+  const checkboxRange = inventorySheet.getRange(2, 1, lastRow - 1, 1);
 
   // First, clear any existing content and validation
   checkboxRange.clearContent();
@@ -63,14 +55,20 @@ function fixAllValidationErrors() {
   // Insert actual checkboxes (this creates proper checkbox controls)
   checkboxRange.insertCheckboxes();
 
-  // The insertCheckboxes() method creates checkboxes that are unchecked by default
+  // FIX 2: Remove validation from Column B (Item Name) - should NOT have validation
+  Logger.log('Removing validation from Column B (Item Name)...');
+  inventorySheet.getRange('B2:B1000').clearDataValidations();
+
+  // FIX 3: Remove validation from Column D (Box) - should NOT have validation
+  Logger.log('Removing validation from Column D (Box)...');
+  inventorySheet.getRange('D2:D1000').clearDataValidations();
 
   ui.alert(
     'Fix Complete!',
     `✅ Fixed validation errors:\n\n` +
-    `• Column A: Validation removed\n` +
-    `• Column C: Validation removed\n` +
-    `• Column G: ${lastRow - 1} checkboxes inserted (unchecked)\n\n` +
+    `• Column A: ${lastRow - 1} checkboxes inserted (unchecked)\n` +
+    `• Column B: Validation removed\n` +
+    `• Column D: Validation removed\n\n` +
     'All red triangle errors should be gone now!',
     ui.ButtonSet.OK
   );

@@ -105,8 +105,8 @@ function createMainInventorySheet(ss) {
   // Create new sheet
   sheet = ss.insertSheet('Main Inventory', 0);
 
-  // Set up headers - NOW 7 COLUMNS
-  const headers = ['Item Name', 'Location', 'Box', 'Quantity', 'Last Updated', 'Full Location', '📋 Remove?'];
+  // Set up headers - 7 COLUMNS (Remove? moved to column A)
+  const headers = ['📋 Remove?', 'Item Name', 'Location', 'Box', 'Quantity', 'Last Updated', 'Full Location'];
   sheet.getRange('A1:G1').setValues([headers]);
 
   // Format header row
@@ -120,39 +120,39 @@ function createMainInventorySheet(ss) {
   sheet.setFrozenRows(1);
 
   // Set column widths
-  sheet.setColumnWidth(1, 250);  // Item Name
-  sheet.setColumnWidth(2, 100);  // Location
-  sheet.setColumnWidth(3, 80);   // Box
-  sheet.setColumnWidth(4, 100);  // Quantity
-  sheet.setColumnWidth(5, 150);  // Last Updated
-  sheet.setColumnWidth(6, 120);  // Full Location
-  sheet.setColumnWidth(7, 70);   // Remove? checkbox
+  sheet.setColumnWidth(1, 70);   // Remove? checkbox
+  sheet.setColumnWidth(2, 250);  // Item Name
+  sheet.setColumnWidth(3, 100);  // Location
+  sheet.setColumnWidth(4, 80);   // Box
+  sheet.setColumnWidth(5, 100);  // Quantity
+  sheet.setColumnWidth(6, 150);  // Last Updated
+  sheet.setColumnWidth(7, 120);  // Full Location
 
-  // Add data validation for Location column (B2:B1000)
+  // Add checkbox validation for Remove column (A2:A1000)
+  const checkboxRule = SpreadsheetApp.newDataValidation()
+    .requireCheckbox()
+    .build();
+  sheet.getRange('A2:A1000').setDataValidation(checkboxRule);
+
+  // Add data validation for Location column (C2:C1000)
   const locationRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['home', '4', 'P'], true)
     .setAllowInvalid(false)
     .setHelpText('Valid locations: home, 4 (storage unit), P (parking garage)')
     .build();
-  sheet.getRange('B2:B1000').setDataValidation(locationRule);
+  sheet.getRange('C2:C1000').setDataValidation(locationRule);
 
-  // Add formula for Full Location column (F2:F1000)
+  // Add formula for Full Location column (G2:G1000)
   // Formula combines Location and Box with a dash
-  sheet.getRange('F2').setFormula('=IF(A2<>"", B2&"-"&C2, "")');
-  sheet.getRange('F2:F1000').setNumberFormat('@'); // Text format
+  sheet.getRange('G2').setFormula('=IF(B2<>"", C2&"-"&D2, "")');
+  sheet.getRange('G2:G1000').setNumberFormat('@'); // Text format
 
   // Auto-fill formula down
-  sheet.getRange('F2').copyTo(sheet.getRange('F2:F1000'), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
+  sheet.getRange('G2').copyTo(sheet.getRange('G2:G1000'), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
 
-  // ===== NEW: Add checkbox validation for Remove column (G2:G1000) =====
-  const checkboxRule = SpreadsheetApp.newDataValidation()
-    .requireCheckbox()
-    .build();
-  sheet.getRange('G2:G1000').setDataValidation(checkboxRule);
-
-  // Add conditional formatting for zero quantity (highlight in light red) - NOW INCLUDES COLUMN G
+  // Add conditional formatting for zero quantity (highlight in light red)
   const zeroQtyRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=$D2=0')
+    .whenFormulaSatisfied('=$E2=0')
     .setBackground('#f4c7c3')
     .setRanges([sheet.getRange('A2:G1000')])
     .build();
@@ -162,10 +162,10 @@ function createMainInventorySheet(ss) {
   sheet.setConditionalFormatRules(rules);
 
   // Add instructions note
-  sheet.getRange('A2').setNote(
+  sheet.getRange('B2').setNote(
     'Add items via Parser Input tab.\n\n' +
     'To remove items:\n' +
-    '1. Check boxes in "Remove?" column\n' +
+    '1. Check boxes in "Remove?" column (column A)\n' +
     '2. Menu: Inventory Manager → Remove Checked Items'
   );
 
@@ -484,8 +484,8 @@ function updateSheetStructure() {
     return;
   }
 
-  // Update Main Inventory headers - NOW 7 COLUMNS
-  const headers = ['Item Name', 'Location', 'Box', 'Quantity', 'Last Updated', 'Full Location', '📋 Remove?'];
+  // Update Main Inventory headers - 7 COLUMNS (Remove? moved to column A)
+  const headers = ['📋 Remove?', 'Item Name', 'Location', 'Box', 'Quantity', 'Last Updated', 'Full Location'];
   inventorySheet.getRange('A1:G1').setValues([headers]);
 
   // Format header row
@@ -496,36 +496,36 @@ function updateSheetStructure() {
     .setHorizontalAlignment('center');
 
   // Update column widths
-  inventorySheet.setColumnWidth(1, 250);  // Item Name
-  inventorySheet.setColumnWidth(2, 100);  // Location
-  inventorySheet.setColumnWidth(3, 80);   // Box
-  inventorySheet.setColumnWidth(4, 100);  // Quantity
-  inventorySheet.setColumnWidth(5, 150);  // Last Updated
-  inventorySheet.setColumnWidth(6, 120);  // Full Location
-  inventorySheet.setColumnWidth(7, 70);   // Remove? checkbox
+  inventorySheet.setColumnWidth(1, 70);   // Remove? checkbox
+  inventorySheet.setColumnWidth(2, 250);  // Item Name
+  inventorySheet.setColumnWidth(3, 100);  // Location
+  inventorySheet.setColumnWidth(4, 80);   // Box
+  inventorySheet.setColumnWidth(5, 100);  // Quantity
+  inventorySheet.setColumnWidth(6, 150);  // Last Updated
+  inventorySheet.setColumnWidth(7, 120);  // Full Location
 
-  // Update validation for Location column
+  // Add checkbox validation for Column A (Remove?)
+  const checkboxRule = SpreadsheetApp.newDataValidation()
+    .requireCheckbox()
+    .build();
+  inventorySheet.getRange('A2:A1000').setDataValidation(checkboxRule);
+
+  // Update validation for Location column (now column C)
   const locationRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['home', '4', 'P'], true)
     .setAllowInvalid(false)
     .setHelpText('Valid locations: home, 4 (storage unit), P (parking garage)')
     .build();
-  inventorySheet.getRange('B2:B1000').setDataValidation(locationRule);
+  inventorySheet.getRange('C2:C1000').setDataValidation(locationRule);
 
-  // Update Full Location formula in column F
-  inventorySheet.getRange('F2').setFormula('=IF(A2<>"", B2&"-"&C2, "")');
-  inventorySheet.getRange('F2:F1000').setNumberFormat('@');
-  inventorySheet.getRange('F2').copyTo(inventorySheet.getRange('F2:F1000'), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
+  // Update Full Location formula in column G
+  inventorySheet.getRange('G2').setFormula('=IF(B2<>"", C2&"-"&D2, "")');
+  inventorySheet.getRange('G2:G1000').setNumberFormat('@');
+  inventorySheet.getRange('G2').copyTo(inventorySheet.getRange('G2:G1000'), SpreadsheetApp.CopyPasteType.PASTE_FORMULA);
 
-  // ===== NEW: Add checkbox validation for Column G =====
-  const checkboxRule = SpreadsheetApp.newDataValidation()
-    .requireCheckbox()
-    .build();
-  inventorySheet.getRange('G2:G1000').setDataValidation(checkboxRule);
-
-  // Update conditional formatting for zero quantity - NOW INCLUDES COLUMN G
+  // Update conditional formatting for zero quantity (column E)
   const zeroQtyRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=$D2=0')
+    .whenFormulaSatisfied('=$E2=0')
     .setBackground('#f4c7c3')
     .setRanges([inventorySheet.getRange('A2:G1000')])
     .build();

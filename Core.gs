@@ -111,9 +111,9 @@ function commitChanges() {
 
           if (existingRow > 0) {
             // Item exists - check if location changed or just quantity
-            const existingData = inventorySheet.getRange(existingRow, 1, 1, 6).getValues()[0];
-            const existingLoc = String(existingData[1] || '');
-            const existingBox = String(existingData[2] || '');
+            const existingData = inventorySheet.getRange(existingRow, 1, 1, 7).getValues()[0];
+            const existingLoc = String(existingData[2] || '');  // Location is now column C (index 2)
+            const existingBox = String(existingData[3] || '');  // Box is now column D (index 3)
 
             if (location !== existingLoc || box !== existingBox) {
               // Location changed - MOVE
@@ -200,17 +200,22 @@ function addItemToInventory(itemName, location, box, quantity, user) {
     throw new Error(`Item "${itemName}" already exists. Use UPDATE or MOVE action instead.`);
   }
 
-  // Add new row - NOW APPENDS 7 COLUMNS (added false for checkbox)
+  // Add new row - 7 COLUMNS (Remove? checkbox is now first column)
   const fullLocation = `${location}-${box}`;
+  const newRowNum = inventorySheet.getLastRow() + 1;
+
   inventorySheet.appendRow([
+    '',            // Remove? checkbox - will be set below
     itemName,
     location,
     box || '',
     quantity || 1,
     new Date(),
-    fullLocation,
-    false  // Remove? checkbox (unchecked by default)
+    fullLocation
   ]);
+
+  // Insert actual checkbox in column A for the new row
+  inventorySheet.getRange(newRowNum, 1).insertCheckboxes();
 
   Logger.log(`Added item: ${itemName} at ${fullLocation}`);
 }
@@ -227,16 +232,16 @@ function updateItemQuantity(itemName, quantityChange, user) {
     throw new Error(`Item "${itemName}" not found in inventory.`);
   }
 
-  // Get current quantity and update
-  const currentQty = inventorySheet.getRange(row, 4).getValue() || 0;
+  // Get current quantity and update (Quantity is now column 5)
+  const currentQty = inventorySheet.getRange(row, 5).getValue() || 0;
   const newQty = currentQty + quantityChange;
 
   if (newQty < 0) {
     throw new Error(`Cannot set quantity to ${newQty}. Current quantity is ${currentQty}.`);
   }
 
-  inventorySheet.getRange(row, 4).setValue(newQty);
-  inventorySheet.getRange(row, 5).setValue(new Date());
+  inventorySheet.getRange(row, 5).setValue(newQty);
+  inventorySheet.getRange(row, 6).setValue(new Date());
 
   Logger.log(`Updated quantity for ${itemName}: ${currentQty} → ${newQty}`);
 }
@@ -253,10 +258,10 @@ function moveItem(itemName, newLocation, newBox, user) {
     throw new Error(`Item "${itemName}" not found in inventory.`);
   }
 
-  // Update location and box
-  inventorySheet.getRange(row, 2).setValue(newLocation);
-  inventorySheet.getRange(row, 3).setValue(newBox || '');
-  inventorySheet.getRange(row, 5).setValue(new Date());
+  // Update location and box (Location is now column 3, Box is column 4)
+  inventorySheet.getRange(row, 3).setValue(newLocation);
+  inventorySheet.getRange(row, 4).setValue(newBox || '');
+  inventorySheet.getRange(row, 6).setValue(new Date());
 
   Logger.log(`Moved ${itemName} to ${newLocation}-${newBox}`);
 }
@@ -291,7 +296,7 @@ function findItemRow(itemName) {
   const searchName = itemName.toLowerCase().trim();
 
   for (let i = 1; i < data.length; i++) {  // Start at 1 to skip header
-    const currentName = String(data[i][0]).toLowerCase().trim();
+    const currentName = String(data[i][1]).toLowerCase().trim();  // Item Name is now column B (index 1)
     if (currentName === searchName) {
       return i + 1;  // Return 1-indexed row number
     }
@@ -375,12 +380,12 @@ function searchInventory() {
   const invData = inventorySheet.getDataRange().getValues();
 
   for (let i = 1; i < invData.length; i++) {  // Skip header row
-    const itemName = String(invData[i][0]);
+    const itemName = String(invData[i][1]);  // Item Name is now column B (index 1)
 
     if (itemName.toLowerCase().includes(searchTermLower)) {
-      const location = invData[i][1];
-      const box = invData[i][2];
-      const quantity = invData[i][3];
+      const location = invData[i][2];   // Location is now column C (index 2)
+      const box = invData[i][3];        // Box is now column D (index 3)
+      const quantity = invData[i][4];   // Quantity is now column E (index 4)
 
       results.push([
         itemName,
@@ -657,15 +662,15 @@ function removeCheckedItems() {
   const itemsToRemove = [];
 
   for (let i = 0; i < data.length; i++) {
-    const checkbox = data[i][6];  // Column G (index 6)
+    const checkbox = data[i][0];  // Column A (index 0) - Remove? checkbox
 
     if (checkbox === true) {
       itemsToRemove.push({
         rowIndex: i + 2,  // +2 for header row and 0-indexing
-        itemName: data[i][0],
-        location: data[i][1],
-        box: data[i][2],
-        quantity: data[i][3]
+        itemName: data[i][1],  // Item Name is now column B (index 1)
+        location: data[i][2],  // Location is now column C (index 2)
+        box: data[i][3],       // Box is now column D (index 3)
+        quantity: data[i][4]   // Quantity is now column E (index 4)
       });
     }
   }

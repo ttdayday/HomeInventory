@@ -373,3 +373,156 @@ function clearMainInventory() {
     }
   }
 }
+
+/**
+ * 🔧 MIGRATION: Reorganizes existing data to new column layout
+ *
+ * OLD: [Item Name, Location, Box, Quantity, Last Updated, Full Location, Remove?]
+ * NEW: [Remove?, Item Name, Location, Box, Quantity, Last Updated, Full Location]
+ *
+ * This moves the Remove? column from G to A and shifts everything else right
+ *
+ * ⚠️ IMPORTANT: Run this ONCE after updating to the new code version
+ */
+function migrateToNewColumnLayout() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const inventorySheet = ss.getSheetByName('Main Inventory');
+
+  if (!inventorySheet) {
+    ui.alert('Error', 'Main Inventory sheet not found.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const lastRow = inventorySheet.getLastRow();
+
+  if (lastRow < 2) {
+    ui.alert('Info', 'No data to migrate.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Confirm with user
+  const response = ui.alert(
+    '🔧 Migrate to New Column Layout',
+    `This will reorganize ${lastRow - 1} row(s) of data:\n\n` +
+    `OLD: Item Name | Location | Box | Qty | Updated | FullLoc | Remove?\n` +
+    `NEW: Remove? | Item Name | Location | Box | Qty | Updated | FullLoc\n\n` +
+    `✅ Your data will be preserved\n` +
+    `✅ Columns will be rearranged\n` +
+    `✅ Checkboxes will be added to column A\n\n` +
+    'Continue?',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response !== ui.Button.OK) {
+    ui.alert('Cancelled', 'No changes were made.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Read all existing data (OLD format)
+  const oldData = inventorySheet.getRange(2, 1, lastRow - 1, 7).getValues();
+
+  // Prepare new data array with rearranged columns
+  const newData = [];
+
+  for (let i = 0; i < oldData.length; i++) {
+    const oldRow = oldData[i];
+
+    // OLD format indices:
+    // 0: Item Name
+    // 1: Location
+    // 2: Box
+    // 3: Quantity
+    // 4: Last Updated
+    // 5: Full Location
+    // 6: Remove? (might be empty, text, or invalid value)
+
+    // NEW format: [Remove?, Item Name, Location, Box, Qty, Last Updated, Full Loc]
+    const newRow = [
+      false,           // Remove? - default to unchecked (was column G, index 6)
+      oldRow[0],       // Item Name (was column A, index 0)
+      oldRow[1],       // Location (was column B, index 1)
+      oldRow[2],       // Box (was column C, index 2)
+      oldRow[3],       // Quantity (was column D, index 3)
+      oldRow[4],       // Last Updated (was column E, index 4)
+      oldRow[5]        // Full Location (was column F, index 5)
+    ];
+
+    newData.push(newRow);
+  }
+
+  // Clear existing data and validations
+  inventorySheet.getRange(2, 1, lastRow - 1, 7).clearContent();
+  inventorySheet.getRange(2, 1, lastRow - 1, 7).clearDataValidations();
+
+  // Write reorganized data
+  inventorySheet.getRange(2, 1, newData.length, 7).setValues(newData);
+
+  // Apply the structure updates (headers, validations, formulas)
+  updateSheetStructure();
+
+  ui.alert(
+    '✅ Migration Complete!',
+    `Successfully reorganized ${newData.length} row(s)!\n\n` +
+    `New column layout:\n` +
+    `• Column A: Remove? (checkboxes)\n` +
+    `• Column B: Item Name\n` +
+    `• Column C: Location\n` +
+    `• Column D: Box\n` +
+    `• Column E: Quantity\n` +
+    `• Column F: Last Updated\n` +
+    `• Column G: Full Location\n\n` +
+    'Your inventory is now using the new layout!',
+    ui.ButtonSet.OK
+  );
+
+  Logger.log(`Migrated ${newData.length} rows to new column layout`);
+}
+
+/**
+ * Helper function to verify data migration worked correctly
+ * Displays sample data from first 3 rows in the logs
+ */
+function verifyMigration() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const inventorySheet = ss.getSheetByName('Main Inventory');
+
+  if (!inventorySheet) {
+    Logger.log('ERROR: Main Inventory sheet not found');
+    return;
+  }
+
+  const lastRow = inventorySheet.getLastRow();
+
+  Logger.log('=== Migration Verification ===');
+  Logger.log(`Total rows (including header): ${lastRow}`);
+
+  // Check headers
+  const headers = inventorySheet.getRange(1, 1, 1, 7).getValues()[0];
+  Logger.log(`Headers: ${headers.join(' | ')}`);
+
+  // Check first 3 data rows
+  if (lastRow > 1) {
+    const sampleRows = Math.min(3, lastRow - 1);
+    const sampleData = inventorySheet.getRange(2, 1, sampleRows, 7).getValues();
+
+    Logger.log('\n=== Sample Data (first 3 rows) ===');
+    sampleData.forEach((row, index) => {
+      Logger.log(`Row ${index + 2}:`);
+      Logger.log(`  Remove?: ${row[0]} (type: ${typeof row[0]})`);
+      Logger.log(`  Item Name: ${row[1]}`);
+      Logger.log(`  Location: ${row[2]}`);
+      Logger.log(`  Box: ${row[3]}`);
+      Logger.log(`  Quantity: ${row[4]}`);
+      Logger.log(`  Last Updated: ${row[5]}`);
+      Logger.log(`  Full Location: ${row[6]}`);
+    });
+  }
+
+  Logger.log('\n=== Verification Complete ===');
+  ss.toast(
+    'Migration verified. Check logs (Ctrl+Enter) for details.',
+    'Verification Complete',
+    5
+  );
+}
